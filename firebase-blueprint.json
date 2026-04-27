@@ -1,0 +1,34 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking Request",
+      "description": "Represents a legal or tax consultation booking request.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the client" },
+        "phone": { "type": "string", "description": "Mobile number" },
+        "email": { "type": "string", "description": "Email address", "format": "email" },
+        "companyName": { "type": "string", "description": "Optional company name" },
+        "city": { "type": "string", "description": "City of residence or business" },
+        "serviceCategory": { "type": "string", "description": "Main service category" },
+        "subService": { "type": "string", "description": "Specific service requested" },
+        "consultationType": { "type": "string", "enum": ["In-person", "Video Call", "Phone Call", "Document Review"] },
+        "priority": { "type": "string", "enum": ["Normal", "Urgent", "Very Urgent"] },
+        "date": { "type": "string", "description": "Preferred date" },
+        "time": { "type": "string", "description": "Preferred time slot" },
+        "description": { "type": "string", "description": "Issue details" },
+        "conditionalData": { "type": "object", "description": "Service-specific dynamic fields" },
+        "fileURLs": { "type": "array", "description": "Links to uploaded documents" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Completed"] },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "phone", "email", "serviceCategory", "subService", "consultationType", "priority", "date", "time", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Collection of all booking requests."
+    }
+  }
+}

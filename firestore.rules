@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: Valid ID
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // Helper: Auth
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+
+    // Helper: Admin - Bootstrap user from prompt
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'erp.elawyers@gmail.com' && 
+        request.auth.token.email_verified == true
+      );
+    }
+
+    // 1. Validation Blueprint for Booking
+    function isValidBooking(data) {
+      return data.keys().hasAll(['name', 'phone', 'email', 'serviceCategory', 'subService', 'consultationType', 'priority', 'date', 'time', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.serviceCategory is string &&
+             data.subService is string &&
+             data.consultationType in ['In-person', 'Video Call', 'Phone Call', 'Document Review'] &&
+             data.priority in ['Normal', 'Urgent', 'Very Urgent'] &&
+             data.date is string &&
+             data.time is string &&
+             data.status == 'Pending' &&
+             data.createdAt == request.time.toMillis();
+    }
+
+    // Bookings Collection
+    match /bookings/{bookingId} {
+      // Public can create bookings
+      allow create: if isValidId(bookingId) && isValidBooking(request.resource.data);
+      
+      // Allow user to read their own bookings or public to get by ID
+      allow get: if true; // Allows public tracking if they have the exact long ID
+      
+      // Allow users to list their own bookings
+      allow list: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      
+      // Allow users to update their bookings with additional files
+      allow update: if isAdmin() || (
+        isSignedIn() && 
+        resource.data.email == request.auth.token.email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fileURLs'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow create, read, update: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}
